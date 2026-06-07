@@ -2,19 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { provisionMXrouteEmail } from '@/lib/mxroute-client';
 
+// Helper to generate a random string for passwords
+function generateRandomString(length: number) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ installationId: string }> } // <-- Added Promise
+  { params }: { params: Promise<{ installationId: string }> }
 ) {
-  const { installationId } = await params; // <-- Awaited params
+  const { installationId } = await params;
   const body = await req.json();
   
   // The user inputs the domain name in the Vercel UI. It comes as 'name'.
-  const domain = body.name; 
+  const domain = body.name || 'maild.dev'; 
   
-  // You will configure 'metadata' in the Vercel dashboard to ask for prefix and password
-  const emailPrefix = body.metadata?.emailPrefix || 'admin';
-  const emailPassword = body.metadata?.emailPassword || 'DefaultPass123!';
+  // WORKAROUND: If Vercel doesn't send metadata, generate it automatically
+  const emailPrefix = body.metadata?.emailPrefix || `user${Math.floor(Math.random() * 1000)}`;
+  const emailPassword = body.metadata?.emailPassword || generateRandomString(12);
 
   try {
     // 1. Call YOUR MXroute engine to create the domain and email
@@ -23,7 +33,7 @@ export async function POST(
     // 2. Get the saved Vercel Access Token to inject DNS records later
     const installation = await kv.get(`install:${installationId}`) as any;
     if (installation?.accessToken) {
-      console.log(`[DNS] Would inject MX record for ${domain} using host: ${mxResult.smtpHost}`);
+      console.log(`[DNS] Ready to inject MX record for ${domain} using host: ${mxResult.smtpHost}`);
     }
 
     // 3. THE MAGIC: Return the response to Vercel
@@ -31,7 +41,7 @@ export async function POST(
       id: domain,
       name: domain,
       status: 'ready',
-      billingPlan: { id: body.billingPlanId },
+      billingPlan: { id: body.billingPlanId || 'free-tier' },
       metadata: { domain, emailPrefix },
       
       // Vercel automatically adds these to the user's project as Environment Variables!
