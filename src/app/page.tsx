@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link"; // <--- ADDED: Import Next.js Link
 
 // Menu Structure
 const menuItems = {
@@ -40,13 +41,24 @@ export default function Home() {
     <div className="flex h-screen overflow-hidden font-mono">
       {/* --- SIDEBAR --- */}
       <aside className={`${sidebarOpen ? "w-64" : "w-16"} transition-all duration-300 bg-[#161b22] border-r border-gray-800 flex flex-col overflow-hidden`}>
+        
+        {/* Header */}
         <div className="p-4 border-b border-gray-800 flex items-center justify-between h-16">
-          {sidebarOpen && <h1 className="text-lg font-bold text-white tracking-tight">Maild</h1>}
+          {sidebarOpen && (
+            <div className="flex items-center gap-4">
+              <h1 className="text-lg font-bold text-white tracking-tight">Maild</h1>
+              {/* <--- ADDED: Link to Pricing Page */}
+              <Link href="/pricing" className="text-xs text-gray-400 hover:text-blue-400 transition-colors border border-gray-700 px-2 py-1 rounded">
+                Pricing
+              </Link>
+            </div>
+          )}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded hover:bg-gray-700 text-gray-400 transition-colors" title="Toggle Sidebar">
             {sidebarOpen ? "✕" : "☰"}
           </button>
         </div>
 
+        {/* Navigation */}
         <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
           <div>
             {sidebarOpen && <h2 className="text-xs font-semibold text-gray-500 uppercase mb-3 px-2">Clients</h2>}
@@ -85,7 +97,7 @@ export default function Home() {
   );
 }
 
-// --- NEW: CREATE EMAIL COMPONENT ---
+// --- CREATE EMAIL COMPONENT ---
 function CreateEmailView({ copyToClipboard, copiedField }: any) {
   const [domain, setDomain] = useState("");
   const [prefix, setPrefix] = useState("");
@@ -122,7 +134,7 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
     return (
       <div className="max-w-3xl mx-auto">
         <h2 className="text-2xl font-bold mb-2 text-green-400">✅ Email Created Successfully!</h2>
-        <p className="text-gray-400 mb-6 text-sm">Your mailbox <code className="text-blue-300">{result.email}</code> is ready. To start receiving emails, you must add the following DNS records to your domain registrar (e.g., Vercel, Namecheap, Cloudflare).</p>
+        <p className="text-gray-400 mb-6 text-sm">Your mailbox <code className="text-blue-300">{result.email}</code> is ready. To start receiving emails, you must add the following DNS records to your domain registrar.</p>
         
         <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6 mb-6">
           <h3 className="text-lg font-semibold text-yellow-400 mb-4">Required DNS Records</h3>
@@ -178,7 +190,7 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
   );
 }
 
-// --- EXISTING SUB-COMPONENTS ---
+// --- SMTP DETAILS COMPONENT ---
 function SMTPDetailsView({ copyToClipboard, copiedField }: any) {
   const smtpData = {
     incomingServer: "arrow.mxrouting.net", 
