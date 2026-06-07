@@ -46,7 +46,7 @@ export async function provisionMXrouteEmail(
     method: 'POST',
     headers,
     body: JSON.stringify({ 
-      user: emailPrefix, 
+      username: emailPrefix, // <--- FIX: Changed from 'user' to 'username'
       password: password,
       quota: 0 // 0 = Unlimited on MXroute
     }),
