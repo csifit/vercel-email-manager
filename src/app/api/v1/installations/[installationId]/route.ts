@@ -4,9 +4,9 @@ import { kv } from '@vercel/kv';
 // PUT: Called when user clicks "Install" in Vercel Marketplace
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { installationId: string } }
+  { params }: { params: Promise<{ installationId: string }> } // <-- Added Promise
 ) {
-  const { installationId } = params;
+  const { installationId } = await params; // <-- Awaited params
   const body = await req.json();
   
   // Vercel sends the access token in the body
@@ -25,9 +25,9 @@ export async function PUT(
 // DELETE: Called when user clicks "Uninstall"
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { installationId: string } }
+  { params }: { params: Promise<{ installationId: string }> } // <-- Added Promise
 ) {
-  const { installationId } = params;
+  const { installationId } = await params; // <-- Awaited params
   await kv.del(`install:${installationId}`);
   
   // Returning finalized: true tells Vercel to delete the installation immediately

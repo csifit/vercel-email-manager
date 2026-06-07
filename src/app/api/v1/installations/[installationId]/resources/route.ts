@@ -4,9 +4,9 @@ import { provisionMXrouteEmail } from '@/lib/mxroute-client';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { installationId: string } }
+  { params }: { params: Promise<{ installationId: string }> } // <-- Added Promise
 ) {
-  const { installationId } = params;
+  const { installationId } = await params; // <-- Awaited params
   const body = await req.json();
   
   // The user inputs the domain name in the Vercel UI. It comes as 'name'.
@@ -23,7 +23,6 @@ export async function POST(
     // 2. Get the saved Vercel Access Token to inject DNS records later
     const installation = await kv.get(`install:${installationId}`) as any;
     if (installation?.accessToken) {
-      // FIX: Changed mxResult.mxHost to mxResult.smtpHost
       console.log(`[DNS] Would inject MX record for ${domain} using host: ${mxResult.smtpHost}`);
     }
 
@@ -36,11 +35,10 @@ export async function POST(
       metadata: { domain, emailPrefix },
       
       // Vercel automatically adds these to the user's project as Environment Variables!
-      // Note: Vercel secrets must be strings, so we use .toString() for the port.
       secrets: [
         { name: 'SMTP_HOST', value: mxResult.smtpHost },
         { name: 'SMTP_PORT', value: mxResult.smtpPort.toString() },
-        { name: 'SMTP_USER', value: mxResult.email }, // Cleaner than reconstructing it
+        { name: 'SMTP_USER', value: mxResult.email },
         { name: 'SMTP_PASS', value: emailPassword },
       ]
     });
