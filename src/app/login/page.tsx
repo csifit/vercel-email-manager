@@ -23,11 +23,9 @@ export default function LoginPage() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: email.split('@')[0] } }
+          options: { data: { full_name: email.split("@")[0] } }
         });
         if (error) throw error;
-        // Note: If email confirmation is enabled in Supabase, the user must check their email.
-        // You can disable "Confirm email" in Supabase Dashboard > Authentication > Providers > Email for easier testing.
         alert("Account created! Please check your email to confirm, or try logging in.");
         setIsSignUp(false);
       } else {
@@ -56,26 +54,46 @@ export default function LoginPage() {
         <form onSubmit={handleAuth} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1">Email Address</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="you@example.com" />
+            <input 
+              type="email" 
+              required 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              placeholder="you@example.com" 
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••" />
+            <input 
+              type="password" 
+              required 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              placeholder="••••••••" 
+            />
           </div>
 
           {error && <div className="p-3 bg-red-900/20 border border-red-700/50 rounded text-red-400 text-sm">{error}</div>}
 
-          <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors disabled:opacity-50">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full py-3 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
             {loading ? "Processing..." : isSignUp ? "Create Account" : "Sign In"}
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-400">
           {isSignUp ? "Already have an account? " : "Don't have an account? "}
-          <button onClick={() => { setIsSignUp(!isSignUp); setError(""); }} className="text-blue-400 hover:text-blue-300 font-medium">
+          <button 
+            onClick={() => { setIsSignUp(!isSignUp); setError(""); }} 
+            className="text-blue-400 hover:text-blue-300 font-medium"
+          >
             {isSignUp ? "Sign In" : "Sign Up"}
           </button>
- a
         </div>
         <div className="mt-4 text-center">
           <Link href="/pricing" className="text-xs text-gray-500 hover:text-gray-300">View Pricing</Link>
