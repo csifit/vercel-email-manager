@@ -1,32 +1,55 @@
 import { NextResponse } from 'next/server';
 import { provisionMXrouteEmail } from '@/lib/mxroute-client';
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(req: Request) {
-  try {
-    const { domain, prefix, password } = await req.json();
+  // FIX: Await the createClient() function because it returns a Promise
+  const supabase = await createClient();
+  
+  // 1. Verify user is logged in
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    // Basic validation
-    if (!domain || !prefix || !password) {
-      return NextResponse.json({ error: 'Domain, prefix, and password are required.' }, { status: 400 });
+  try {
+    const { prefix, password } = await req.json();
+    const domain = "maild.dev"; 
+
+    if (!prefix || !password) {
+      return NextResponse.json({ error: 'Prefix and password are required.' }, { status: 400 });
     }
 
-    // Call our MXroute engine
+    // 2. Provision on MXroute
     const result = await provisionMXrouteEmail(domain, prefix, password);
 
-    // Return the success data, including the DNS records the user needs to add
+    // 3. Save to Supabase Database
+    const { error: dbError } = await supabase
+      .from('email_accounts')
+      .insert({
+        user_id: user.id,
+        email_address: result.email,
+        server_node: result.serverNode,
+      });
+
+    if (dbError) {
+      console.error('Database insert error:', dbError);
+      if (dbError.code === '23505') {
+         return NextResponse.json({ error: 'This email address already exists.' }, { status: 400 });
+      }
+    }
+
+    // 4. Return success to frontend
     return NextResponse.json({
       success: true,
       email: result.email,
+      serverNode: result.serverNode,
       smtp: {
         host: result.smtpHost,
         port: result.smtpPort,
         user: result.email,
-        pass: password, // In a real app, don't return the plain text password in the response!
-      },
-      dnsRecords: [
-        { type: 'MX', name: '@', value: result.mxRecord },
-        { type: 'TXT', name: '@', value: result.spfRecord },
-      ]
+        pass: password,
+      }
     });
 
   } catch (error: any) {

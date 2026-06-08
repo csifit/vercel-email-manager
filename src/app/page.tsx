@@ -3,17 +3,13 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-// Helper to get the correct MXroute Webmail URL
-const getWebmailUrl = (server: string = "arrow.mxrouting.net") => {
-  return `https://${server}/webmail`;
-};
-
 export default function Dashboard() {
-  const [activeItem, setActiveItem] = useState("create");
+  const [activeItem, setActiveItem] = useState("my-emails");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
   const [userRole, setUserRole] = useState<string>("user");
+  const [emails, setEmails] = useState<any[]>([]);
   const router = useRouter();
   const supabase = createClient();
 
@@ -25,6 +21,13 @@ export default function Dashboard() {
 
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
       if (profile) setUserRole(profile.role);
+
+      // Fetch user's emails
+      const { data: emailData } = await supabase
+        .from("email_accounts")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (emailData) setEmails(emailData);
     };
     checkAuth();
   }, [router, supabase]);
@@ -41,35 +44,23 @@ export default function Dashboard() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const refreshEmails = async () => {
+    const { data } = await supabase.from("email_accounts").select("*").order("created_at", { ascending: false });
+    if (data) setEmails(data);
+  };
+
   const renderContent = () => {
     if (activeItem === "admin" && userRole === "admin") return <AdminView />;
-    if (activeItem === "create") return <CreateEmailView copyToClipboard={copyToClipboard} copiedField={copiedField} />;
+    if (activeItem === "my-emails") return <MyEmailsView emails={emails} copyToClipboard={copyToClipboard} copiedField={copiedField} />;
+    if (activeItem === "create") return <CreateEmailView copyToClipboard={copyToClipboard} copiedField={copiedField} onSuccess={refreshEmails} />;
     if (activeItem === "smtp") return <SMTPDetailsView copyToClipboard={copyToClipboard} copiedField={copiedField} />;
     if (activeItem === "profile") return <ProfileView email={userEmail} role={userRole} />;
-    if (activeItem === "inbox") {
-      // Redirect to Webmail directly from the dashboard
-      return (
-        <div className="max-w-xl mx-auto text-center py-20">
-          <h2 className="text-2xl font-bold mb-4 text-white">Access Your Inbox</h2>
-          <p className="text-gray-400 mb-8">Click below to securely log in to your MXroute Webmail portal.</p>
-          <a 
-            href={getWebmailUrl()} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-block px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/30"
-          >
-            Open Webmail (Roundcube) ↗
-          </a>
-        </div>
-      );
-    }
     
-    return <PlaceholderView title={activeItem.charAt(0).toUpperCase() + activeItem.slice(1)} desc="Feature under active development." />;
+    return <PlaceholderView title={activeItem} desc="Feature under active development." />;
   };
 
   return (
     <div className="flex h-screen overflow-hidden font-mono bg-[#0d1117] text-white">
-      {/* --- SIDEBAR --- */}
       <aside className={`${sidebarOpen ? "w-64" : "w-16"} transition-all duration-300 bg-[#161b22] border-r border-gray-800 flex flex-col`}>
         <div className="p-4 border-b border-gray-800 flex items-center justify-between h-16">
           {sidebarOpen && <h1 className="text-lg font-bold tracking-tight">Maild</h1>}
@@ -91,9 +82,9 @@ export default function Dashboard() {
                 </li>
               )}
               <li>
-                <button onClick={() => setActiveItem("inbox")} className={`w-full flex items-center p-2 rounded transition-colors ${activeItem === "inbox" ? "bg-blue-600/20 text-blue-400 border-l-2 border-blue-400" : "text-gray-400 hover:bg-gray-800 hover:text-gray-200 border-l-2 border-transparent"}`}>
+                <button onClick={() => setActiveItem("my-emails")} className={`w-full flex items-center p-2 rounded transition-colors ${activeItem === "my-emails" ? "bg-blue-600/20 text-blue-400 border-l-2 border-blue-400" : "text-gray-400 hover:bg-gray-800 hover:text-gray-200 border-l-2 border-transparent"}`}>
                   <span className="w-2 h-2 rounded-full bg-current opacity-70"></span>
-                  {sidebarOpen && <span className="ml-3 text-sm">📥 Inbox (Webmail)</span>}
+                  {sidebarOpen && <span className="ml-3 text-sm">📥 My Emails</span>}
                 </button>
               </li>
               <li>
@@ -132,7 +123,6 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* --- MAIN CONTENT --- */}
       <main className="flex-1 overflow-y-auto p-8">
         {renderContent()}
       </main>
@@ -140,8 +130,52 @@ export default function Dashboard() {
   );
 }
 
-// --- 1. CREATE EMAIL VIEW (Updated with Webmail Link) ---
-function CreateEmailView({ copyToClipboard, copiedField }: any) {
+// --- 1. MY EMAILS VIEW (The new dashboard list) ---
+function MyEmailsView({ emails, copyToClipboard, copiedField }: any) {
+  return (
+    <div className="max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold mb-2 text-white">My Email Addresses</h2>
+      <p className="text-gray-400 mb-8 text-sm">Manage your @maild.dev mailboxes and access your webmail.</p>
+      
+      {emails.length === 0 ? (
+        <div className="bg-[#161b22] border border-gray-800 rounded-lg p-8 text-center">
+          <p className="text-gray-400 mb-4">You haven't created any email addresses yet.</p>
+          <p className="text-sm text-gray-500">Go to "Create Email" in the sidebar to provision your first mailbox.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {emails.map((acc: any) => (
+            <div key={acc.id} className="bg-[#161b22] border border-gray-800 rounded-lg p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-blue-400">{acc.email_address}</h3>
+                <p className="text-xs text-gray-500 mt-1">Server: {acc.server_node} • Created: {new Date(acc.created_at).toLocaleDateString()}</p>
+              </div>
+              <div className="flex gap-3">
+                <a 
+                  href={`https://${acc.server_node}/roundcube/`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 transition-colors"
+                >
+                  Open Inbox ↗
+                </a>
+                <button 
+                  onClick={() => copyToClipboard(acc.email_address, `email_${acc.id}`)}
+                  className={`px-4 py-2 text-sm font-semibold rounded transition-colors border ${copiedField === `email_${acc.id}` ? 'bg-green-600/20 text-green-400 border-green-600/50' : 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700'}`}
+                >
+                  {copiedField === `email_${acc.id}` ? 'Copied!' : 'Copy Email'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- 2. CREATE EMAIL VIEW ---
+function CreateEmailView({ copyToClipboard, copiedField, onSuccess }: any) {
   const [prefix, setPrefix] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -154,11 +188,12 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
     try {
       const res = await fetch('/api/create-email', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: "maild.dev", prefix, password }),
+        body: JSON.stringify({ prefix, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create email');
       setResult(data);
+      if (onSuccess) onSuccess(); // Refresh the "My Emails" list
     } catch (err: any) { setError(err.message); } 
     finally { setLoading(false); }
   };
@@ -167,15 +202,12 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
     return (
       <div className="max-w-3xl mx-auto">
         <h2 className="text-2xl font-bold mb-2 text-green-400">✅ Email Created Successfully!</h2>
-        <p className="text-gray-400 mb-6 text-sm">
-          Your new mailbox <code className="text-blue-300 font-bold">{result.email}</code> is ready.
-        </p>
+        <p className="text-gray-400 mb-6 text-sm">Your new mailbox <code className="text-blue-300 font-bold">{result.email}</code> is ready.</p>
         
-        {/* NEW: Big Button to open Webmail immediately */}
         <div className="mb-8 p-6 bg-blue-900/20 border border-blue-700/50 rounded-lg text-center">
           <p className="text-blue-200 mb-4">Ready to check your inbox?</p>
           <a 
-            href={getWebmailUrl()} 
+            href={`https://${result.serverNode}/roundcube/`} 
             target="_blank" 
             rel="noopener noreferrer"
             className="inline-block px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
@@ -188,8 +220,7 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
           <h3 className="text-lg font-semibold text-blue-400 mb-4">Your Login Credentials</h3>
           <DetailRow label="Email Address" value={result.email} fieldName="res_email" copyToClipboard={copyToClipboard} copiedField={copiedField} />
           <DetailRow label="Password" value={password} fieldName="res_pass" copyToClipboard={copyToClipboard} copiedField={copiedField} />
-          <DetailRow label="Incoming Server (IMAP)" value="arrow.mxrouting.net" fieldName="res_imap" copyToClipboard={copyToClipboard} copiedField={copiedField} />
-          <DetailRow label="Outgoing Server (SMTP)" value="arrow.mxrouting.net" fieldName="res_smtp" copyToClipboard={copyToClipboard} copiedField={copiedField} />
+          <DetailRow label="Server Node" value={result.serverNode} fieldName="res_server" copyToClipboard={copyToClipboard} copiedField={copiedField} />
         </div>
 
         <button onClick={() => setResult(null)} className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors">
@@ -224,12 +255,12 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
   );
 }
 
-// --- 2. SUPER ADMIN VIEW ---
+// --- 3. SUPER ADMIN VIEW ---
 function AdminView() {
   return (
     <div className="max-w-5xl mx-auto">
       <h2 className="text-2xl font-bold mb-2 text-purple-400">Super Admin Dashboard</h2>
-      <p className="text-gray-400 mb-8 text-sm">Monitor platform traffic, manage users, and review MXroute provisioning logs.</p>
+      <p className="text-gray-400 mb-8 text-sm">Monitor platform traffic and manage users.</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6"><h3 className="text-gray-400 text-sm mb-1">Total Users</h3><p className="text-3xl font-bold text-white">1</p></div>
         <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6"><h3 className="text-gray-400 text-sm mb-1">Active Domains</h3><p className="text-3xl font-bold text-white">1</p></div>
@@ -239,42 +270,32 @@ function AdminView() {
   );
 }
 
-// --- 3. PROFILE VIEW ---
+// --- 4. PROFILE VIEW ---
 function ProfileView({ email, role }: { email: string, role: string }) {
   return (
     <div className="max-w-xl mx-auto">
       <h2 className="text-2xl font-bold mb-2 text-white">My Profile</h2>
-      <p className="text-gray-400 mb-8 text-sm">Manage your account details and subscription.</p>
+      <p className="text-gray-400 mb-8 text-sm">Manage your account details.</p>
       <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6 space-y-4">
         <div><label className="block text-sm font-medium text-gray-400 mb-1">Email Address</label><div className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white">{email}</div></div>
         <div><label className="block text-sm font-medium text-gray-400 mb-1">Account Role</label><div className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-purple-400 font-bold uppercase">{role}</div></div>
-        <button className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors text-sm">Update Password (Coming Soon)</button>
       </div>
     </div>
   );
 }
 
-// --- 4. SMTP DETAILS VIEW ---
+// --- 5. SMTP DETAILS VIEW ---
 function SMTPDetailsView({ copyToClipboard, copiedField }: any) {
   const smtpData = {
-    incomingServer: "arrow.mxrouting.net", imapPort: "993", pop3Port: "995",
-    outgoingServer: "arrow.mxrouting.net", smtpPortSSL: "465", smtpPortSTARTTLS: "587",
-    username: "admin@maild.dev", password: "••••••••••••••••", authMethod: "Normal Password",
+    incomingServer: "arrow.mxrouting.net", imapPort: "993",
+    outgoingServer: "arrow.mxrouting.net", smtpPortSSL: "465",
+    username: "admin@maild.dev", password: "••••••••••••••••",
   };
 
   return (
     <div className="max-w-3xl mx-auto">
       <h2 className="text-2xl font-bold mb-2 text-white">SMTP & IMAP Configuration</h2>
       <p className="text-gray-400 mb-8 text-sm">Use these details to configure your email client.</p>
-      
-      {/* NEW: Quick Access Button here too */}
-      <div className="mb-6 p-4 bg-blue-900/20 border border-blue-700/50 rounded-lg flex items-center justify-between">
-        <span className="text-blue-200">Prefer a browser-based inbox?</span>
-        <a href={getWebmailUrl()} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 transition-colors">
-          Open Webmail ↗
-        </a>
-      </div>
-
       <div className="bg-[#161b22] border border-gray-800 rounded-lg shadow-xl overflow-hidden">
         <div className="p-6 border-b border-gray-800">
           <h3 className="text-lg font-semibold text-blue-400 mb-4">Authentication</h3>
