@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 export default function Dashboard() {
   const [activeItem, setActiveItem] = useState("create");
@@ -13,7 +12,6 @@ export default function Dashboard() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Fetch user and role on load
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -23,17 +21,13 @@ export default function Dashboard() {
       }
       setUserEmail(user.email || "");
 
-      // Fetch user role from profiles table
-      const { data: profile, error } = await supabase
+      const { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
       
-      if (error) {
-        console.error("Error fetching profile:", error);
-      } else if (profile) {
-        console.log("User role fetched:", profile.role); // Check browser console!
+      if (profile) {
         setUserRole(profile.role);
       }
     };
@@ -53,9 +47,7 @@ export default function Dashboard() {
   };
 
   const renderContent = () => {
-    if (activeItem === "admin" && userRole === "admin") {
-      return <AdminView />;
-    }
+    if (activeItem === "admin" && userRole === "admin") return <AdminView />;
     if (activeItem === "create") return <CreateEmailView copyToClipboard={copyToClipboard} copiedField={copiedField} />;
     if (activeItem === "smtp") return <SMTPDetailsView copyToClipboard={copyToClipboard} copiedField={copiedField} />;
     if (activeItem === "profile") return <ProfileView email={userEmail} role={userRole} />;
@@ -130,9 +122,8 @@ export default function Dashboard() {
   );
 }
 
-// --- 1. CREATE EMAIL VIEW (The working form) ---
+// --- 1. CREATE EMAIL VIEW (Updated for @maild.dev only) ---
 function CreateEmailView({ copyToClipboard, copiedField }: any) {
-  const [domain, setDomain] = useState("");
   const [prefix, setPrefix] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -149,7 +140,11 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
       const res = await fetch('/api/create-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain, prefix, password }),
+        body: JSON.stringify({ 
+          domain: "maild.dev", // Hardcoded to your platform's domain
+          prefix, 
+          password 
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create email');
@@ -165,22 +160,22 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
     return (
       <div className="max-w-3xl mx-auto">
         <h2 className="text-2xl font-bold mb-2 text-green-400">✅ Email Created Successfully!</h2>
-        <p className="text-gray-400 mb-6 text-sm">Your mailbox <code className="text-blue-300">{result.email}</code> is ready. Add these DNS records to your registrar.</p>
+        <p className="text-gray-400 mb-6 text-sm">
+          Your new mailbox <code className="text-blue-300 font-bold">{result.email}</code> is ready to use. 
+          Since this is a <code className="text-blue-300">@maild.dev</code> address, DNS records are already configured globally.
+        </p>
+        
         <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6 mb-6">
-          <h3 className="text-lg font-semibold text-yellow-400 mb-4">Required DNS Records</h3>
-          {result.dnsRecords.map((rec: any, idx: number) => (
-            <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-800/50 last:border-0">
-              <span className="text-sm font-medium text-gray-400 mb-1 sm:mb-0">{rec.type} Record ({rec.name})</span>
-              <div className="flex items-center space-x-3">
-                <code className="bg-[#0d1117] px-3 py-1.5 rounded text-sm text-blue-300 border border-gray-700 min-w-[200px] text-right break-all">{rec.value}</code>
-                <button onClick={() => copyToClipboard(rec.value, `dns_${idx}`)} className={`px-3 py-1.5 text-xs rounded transition-all ${copiedField === `dns_${idx}` ? "bg-green-600/20 text-green-400 border border-green-600/50" : "bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 border border-gray-700"}`}>
-                  {copiedField === `dns_${idx}` ? "Copied!" : "Copy"}
-                </button>
-              </div>
-            </div>
-          ))}
+          <h3 className="text-lg font-semibold text-blue-400 mb-4">Your Login Credentials</h3>
+          <DetailRow label="Email Address" value={result.email} fieldName="res_email" copyToClipboard={copyToClipboard} copiedField={copiedField} />
+          <DetailRow label="Password" value={password} fieldName="res_pass" copyToClipboard={copyToClipboard} copiedField={copiedField} />
+          <DetailRow label="Incoming Server (IMAP)" value="arrow.mxrouting.net" fieldName="res_imap" copyToClipboard={copyToClipboard} copiedField={copiedField} />
+          <DetailRow label="Outgoing Server (SMTP)" value="arrow.mxrouting.net" fieldName="res_smtp" copyToClipboard={copyToClipboard} copiedField={copiedField} />
         </div>
-        <button onClick={() => setResult(null)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Create Another</button>
+
+        <button onClick={() => setResult(null)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+          Create Another
+        </button>
       </div>
     );
   }
@@ -188,25 +183,46 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
   return (
     <div className="max-w-xl mx-auto">
       <h2 className="text-2xl font-bold mb-2 text-white">Create Email Address</h2>
-      <p className="text-gray-400 mb-8 text-sm">Provision a new mailbox on your domain via MXroute.</p>
+      <p className="text-gray-400 mb-8 text-sm">Provision a new <code className="text-blue-300">@maild.dev</code> mailbox instantly.</p>
+
       <form onSubmit={handleSubmit} className="bg-[#161b22] border border-gray-800 rounded-lg p-6 space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-2">Domain Name</label>
-          <input type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="yourdomain.com" required className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-400 mb-2">Email Prefix</label>
+          <label className="block text-sm font-medium text-gray-400 mb-2">Choose your Email Prefix</label>
           <div className="flex">
-            <input type="text" value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="admin" required className="flex-1 bg-[#0d1117] border border-gray-700 rounded-l px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <span className="bg-gray-800 border border-l-0 border-gray-700 rounded-r px-3 py-2 text-gray-500">@{domain || 'domain.com'}</span>
+            <input 
+              type="text" 
+              value={prefix} 
+              onChange={(e) => setPrefix(e.target.value)} 
+              placeholder="yourname" 
+              required 
+              className="flex-1 bg-[#0d1117] border border-gray-700 rounded-l px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            />
+            <span className="bg-gray-800 border border-l-0 border-gray-700 rounded-r px-4 py-2 text-gray-400 font-medium select-none">
+              @maild.dev
+            </span>
           </div>
+          <p className="text-xs text-gray-500 mt-2">Only letters, numbers, and dots are allowed.</p>
         </div>
+        
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-2">Password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••••••" required className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <label className="block text-sm font-medium text-gray-400 mb-2">Set Password</label>
+          <input 
+            type="password" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            placeholder="••••••••••••" 
+            required 
+            className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+          />
         </div>
+
         {error && <div className="p-3 bg-red-900/20 border border-red-700/50 rounded text-red-400 text-sm">{error}</div>}
-        <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+
+        <button 
+          type="submit" 
+          disabled={loading} 
+          className="w-full py-3 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           {loading ? "Provisioning..." : "Create Mailbox"}
         </button>
       </form>
