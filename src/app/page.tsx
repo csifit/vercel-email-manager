@@ -3,6 +3,11 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
+// Helper to get the correct MXroute Webmail URL
+const getWebmailUrl = (server: string = "arrow.mxrouting.net") => {
+  return `https://${server}/webmail`;
+};
+
 export default function Dashboard() {
   const [activeItem, setActiveItem] = useState("create");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -15,21 +20,11 @@ export default function Dashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+      if (!user) { router.push("/login"); return; }
       setUserEmail(user.email || "");
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-      
-      if (profile) {
-        setUserRole(profile.role);
-      }
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+      if (profile) setUserRole(profile.role);
     };
     checkAuth();
   }, [router, supabase]);
@@ -51,6 +46,23 @@ export default function Dashboard() {
     if (activeItem === "create") return <CreateEmailView copyToClipboard={copyToClipboard} copiedField={copiedField} />;
     if (activeItem === "smtp") return <SMTPDetailsView copyToClipboard={copyToClipboard} copiedField={copiedField} />;
     if (activeItem === "profile") return <ProfileView email={userEmail} role={userRole} />;
+    if (activeItem === "inbox") {
+      // Redirect to Webmail directly from the dashboard
+      return (
+        <div className="max-w-xl mx-auto text-center py-20">
+          <h2 className="text-2xl font-bold mb-4 text-white">Access Your Inbox</h2>
+          <p className="text-gray-400 mb-8">Click below to securely log in to your MXroute Webmail portal.</p>
+          <a 
+            href={getWebmailUrl()} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/30"
+          >
+            Open Webmail (Roundcube) ↗
+          </a>
+        </div>
+      );
+    }
     
     return <PlaceholderView title={activeItem.charAt(0).toUpperCase() + activeItem.slice(1)} desc="Feature under active development." />;
   };
@@ -78,6 +90,12 @@ export default function Dashboard() {
                   </button>
                 </li>
               )}
+              <li>
+                <button onClick={() => setActiveItem("inbox")} className={`w-full flex items-center p-2 rounded transition-colors ${activeItem === "inbox" ? "bg-blue-600/20 text-blue-400 border-l-2 border-blue-400" : "text-gray-400 hover:bg-gray-800 hover:text-gray-200 border-l-2 border-transparent"}`}>
+                  <span className="w-2 h-2 rounded-full bg-current opacity-70"></span>
+                  {sidebarOpen && <span className="ml-3 text-sm">📥 Inbox (Webmail)</span>}
+                </button>
+              </li>
               <li>
                 <button onClick={() => setActiveItem("create")} className={`w-full flex items-center p-2 rounded transition-colors ${activeItem === "create" ? "bg-blue-600/20 text-blue-400 border-l-2 border-blue-400" : "text-gray-400 hover:bg-gray-800 hover:text-gray-200 border-l-2 border-transparent"}`}>
                   <span className="w-2 h-2 rounded-full bg-current opacity-70"></span>
@@ -122,7 +140,7 @@ export default function Dashboard() {
   );
 }
 
-// --- 1. CREATE EMAIL VIEW (Updated for @maild.dev only) ---
+// --- 1. CREATE EMAIL VIEW (Updated with Webmail Link) ---
 function CreateEmailView({ copyToClipboard, copiedField }: any) {
   const [prefix, setPrefix] = useState("");
   const [password, setPassword] = useState("");
@@ -132,28 +150,17 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-    setResult(null);
-
+    setLoading(true); setError(""); setResult(null);
     try {
       const res = await fetch('/api/create-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          domain: "maild.dev", // Hardcoded to your platform's domain
-          prefix, 
-          password 
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: "maild.dev", prefix, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create email');
       setResult(data);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: any) { setError(err.message); } 
+    finally { setLoading(false); }
   };
 
   if (result) {
@@ -161,10 +168,22 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
       <div className="max-w-3xl mx-auto">
         <h2 className="text-2xl font-bold mb-2 text-green-400">✅ Email Created Successfully!</h2>
         <p className="text-gray-400 mb-6 text-sm">
-          Your new mailbox <code className="text-blue-300 font-bold">{result.email}</code> is ready to use. 
-          Since this is a <code className="text-blue-300">@maild.dev</code> address, DNS records are already configured globally.
+          Your new mailbox <code className="text-blue-300 font-bold">{result.email}</code> is ready.
         </p>
         
+        {/* NEW: Big Button to open Webmail immediately */}
+        <div className="mb-8 p-6 bg-blue-900/20 border border-blue-700/50 rounded-lg text-center">
+          <p className="text-blue-200 mb-4">Ready to check your inbox?</p>
+          <a 
+            href={getWebmailUrl()} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
+          >
+            Open Webmail (Roundcube) ↗
+          </a>
+        </div>
+
         <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6 mb-6">
           <h3 className="text-lg font-semibold text-blue-400 mb-4">Your Login Credentials</h3>
           <DetailRow label="Email Address" value={result.email} fieldName="res_email" copyToClipboard={copyToClipboard} copiedField={copiedField} />
@@ -173,7 +192,7 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
           <DetailRow label="Outgoing Server (SMTP)" value="arrow.mxrouting.net" fieldName="res_smtp" copyToClipboard={copyToClipboard} copiedField={copiedField} />
         </div>
 
-        <button onClick={() => setResult(null)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+        <button onClick={() => setResult(null)} className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors">
           Create Another
         </button>
       </div>
@@ -184,45 +203,20 @@ function CreateEmailView({ copyToClipboard, copiedField }: any) {
     <div className="max-w-xl mx-auto">
       <h2 className="text-2xl font-bold mb-2 text-white">Create Email Address</h2>
       <p className="text-gray-400 mb-8 text-sm">Provision a new <code className="text-blue-300">@maild.dev</code> mailbox instantly.</p>
-
       <form onSubmit={handleSubmit} className="bg-[#161b22] border border-gray-800 rounded-lg p-6 space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-2">Choose your Email Prefix</label>
           <div className="flex">
-            <input 
-              type="text" 
-              value={prefix} 
-              onChange={(e) => setPrefix(e.target.value)} 
-              placeholder="yourname" 
-              required 
-              className="flex-1 bg-[#0d1117] border border-gray-700 rounded-l px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
-            />
-            <span className="bg-gray-800 border border-l-0 border-gray-700 rounded-r px-4 py-2 text-gray-400 font-medium select-none">
-              @maild.dev
-            </span>
+            <input type="text" value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="yourname" required className="flex-1 bg-[#0d1117] border border-gray-700 rounded-l px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <span className="bg-gray-800 border border-l-0 border-gray-700 rounded-r px-4 py-2 text-gray-400 font-medium select-none">@maild.dev</span>
           </div>
-          <p className="text-xs text-gray-500 mt-2">Only letters, numbers, and dots are allowed.</p>
         </div>
-        
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-2">Set Password</label>
-          <input 
-            type="password" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            placeholder="••••••••••••" 
-            required 
-            className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
-          />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••••••" required className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-
         {error && <div className="p-3 bg-red-900/20 border border-red-700/50 rounded text-red-400 text-sm">{error}</div>}
-
-        <button 
-          type="submit" 
-          disabled={loading} 
-          className="w-full py-3 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           {loading ? "Provisioning..." : "Create Mailbox"}
         </button>
       </form>
@@ -237,18 +231,9 @@ function AdminView() {
       <h2 className="text-2xl font-bold mb-2 text-purple-400">Super Admin Dashboard</h2>
       <p className="text-gray-400 mb-8 text-sm">Monitor platform traffic, manage users, and review MXroute provisioning logs.</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6">
-          <h3 className="text-gray-400 text-sm mb-1">Total Users</h3>
-          <p className="text-3xl font-bold text-white">1</p>
-        </div>
-        <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6">
-          <h3 className="text-gray-400 text-sm mb-1">Active Domains</h3>
-          <p className="text-3xl font-bold text-white">1</p>
-        </div>
-        <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6">
-          <h3 className="text-gray-400 text-sm mb-1">API Calls (24h)</h3>
-          <p className="text-3xl font-bold text-green-400">12</p>
-        </div>
+        <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6"><h3 className="text-gray-400 text-sm mb-1">Total Users</h3><p className="text-3xl font-bold text-white">1</p></div>
+        <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6"><h3 className="text-gray-400 text-sm mb-1">Active Domains</h3><p className="text-3xl font-bold text-white">1</p></div>
+        <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6"><h3 className="text-gray-400 text-sm mb-1">API Calls (24h)</h3><p className="text-3xl font-bold text-green-400">12</p></div>
       </div>
     </div>
   );
@@ -261,17 +246,9 @@ function ProfileView({ email, role }: { email: string, role: string }) {
       <h2 className="text-2xl font-bold mb-2 text-white">My Profile</h2>
       <p className="text-gray-400 mb-8 text-sm">Manage your account details and subscription.</p>
       <div className="bg-[#161b22] border border-gray-800 rounded-lg p-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">Email Address</label>
-          <div className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white">{email}</div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">Account Role</label>
-          <div className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-purple-400 font-bold uppercase">{role}</div>
-        </div>
-        <button className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors text-sm">
-          Update Password (Coming Soon)
-        </button>
+        <div><label className="block text-sm font-medium text-gray-400 mb-1">Email Address</label><div className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-white">{email}</div></div>
+        <div><label className="block text-sm font-medium text-gray-400 mb-1">Account Role</label><div className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-purple-400 font-bold uppercase">{role}</div></div>
+        <button className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors text-sm">Update Password (Coming Soon)</button>
       </div>
     </div>
   );
@@ -280,27 +257,29 @@ function ProfileView({ email, role }: { email: string, role: string }) {
 // --- 4. SMTP DETAILS VIEW ---
 function SMTPDetailsView({ copyToClipboard, copiedField }: any) {
   const smtpData = {
-    incomingServer: "arrow.mxrouting.net",
-    imapPort: "993",
-    pop3Port: "995",
-    outgoingServer: "arrow.mxrouting.net",
-    smtpPortSSL: "465",
-    smtpPortSTARTTLS: "587",
-    username: "admin@maild.dev",
-    password: "••••••••••••••••",
-    authMethod: "Normal Password",
+    incomingServer: "arrow.mxrouting.net", imapPort: "993", pop3Port: "995",
+    outgoingServer: "arrow.mxrouting.net", smtpPortSSL: "465", smtpPortSTARTTLS: "587",
+    username: "admin@maild.dev", password: "••••••••••••••••", authMethod: "Normal Password",
   };
 
   return (
     <div className="max-w-3xl mx-auto">
       <h2 className="text-2xl font-bold mb-2 text-white">SMTP & IMAP Configuration</h2>
       <p className="text-gray-400 mb-8 text-sm">Use these details to configure your email client.</p>
+      
+      {/* NEW: Quick Access Button here too */}
+      <div className="mb-6 p-4 bg-blue-900/20 border border-blue-700/50 rounded-lg flex items-center justify-between">
+        <span className="text-blue-200">Prefer a browser-based inbox?</span>
+        <a href={getWebmailUrl()} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 transition-colors">
+          Open Webmail ↗
+        </a>
+      </div>
+
       <div className="bg-[#161b22] border border-gray-800 rounded-lg shadow-xl overflow-hidden">
         <div className="p-6 border-b border-gray-800">
           <h3 className="text-lg font-semibold text-blue-400 mb-4">Authentication</h3>
           <DetailRow label="Username (Full Email)" value={smtpData.username} fieldName="user" copyToClipboard={copyToClipboard} copiedField={copiedField} />
           <DetailRow label="Password" value={smtpData.password} fieldName="pass" copyToClipboard={copyToClipboard} copiedField={copiedField} />
-          <DetailRow label="Authentication Method" value={smtpData.authMethod} fieldName="auth" copyToClipboard={copyToClipboard} copiedField={copiedField} />
         </div>
         <div className="p-6">
           <h3 className="text-lg font-semibold text-green-400 mb-4">Incoming Mail Server (IMAP)</h3>
