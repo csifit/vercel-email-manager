@@ -8,7 +8,6 @@ const plans = [
     period: "/month",
     description: "Perfect for personal projects, portfolios, and single domains.",
     features: [
-      "1 Custom Domain",
       "5 Email Mailboxes",
       "10 GB Storage per mailbox",
       "Standard Spam Protection",
@@ -23,7 +22,6 @@ const plans = [
     period: "/month",
     description: "Ideal for growing businesses, startups, and small teams.",
     features: [
-      "3 Custom Domains",
       "25 Email Mailboxes",
       "50 GB Storage per mailbox",
       "Advanced Spam & Virus Filtering",
@@ -39,7 +37,6 @@ const plans = [
     period: "/month",
     description: "For agencies and developers managing multiple client domains.",
     features: [
-      "Unlimited Custom Domains",
       "Unlimited Email Mailboxes",
       "Unlimited Storage",
       "White-label Dashboard Options",
