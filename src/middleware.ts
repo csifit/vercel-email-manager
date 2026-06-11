@@ -16,38 +16,34 @@ export async function middleware(request: NextRequest) {
         },
         set(name: string, value: string, options: CookieOptions) {
           request.cookies.set({ name, value, ...options });
-          // FIXED: Don't create new response, just add to existing one
+          // ✅ FIX: Just add to existing response, don't create new one
           response.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
           request.cookies.set({ name, value: '', ...options });
-          // FIXED: Don't create new response, just add to existing one
+          // ✅ FIX: Just add to existing response, don't create new one
           response.cookies.set({ name, value: '', ...options });
         },
       },
     }
   );
 
-  // Get user once (not twice like before)
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Protect routes: redirect to login if not authenticated
+  // ✅ FIX: Clear, readable logic
   const pathname = request.nextUrl.pathname;
 
-  // Define which pages are public (don't require authentication)
   const isPublicPage =
     pathname.startsWith('/login') ||
     pathname.startsWith('/pricing') ||
-    pathname === '/'; // Allow homepage for guests
+    pathname === '/'; // ✅ FIX: Allow homepage for guests
 
-  // API routes are protected separately (they handle auth themselves)
   const isApiRoute = pathname.startsWith('/api/');
 
-  // If user is NOT logged in AND trying to access a protected page (not public/api)
+  // ✅ FIX: Simple, clear condition
   if (!user && !isPublicPage && !isApiRoute) {
-    // Redirect to login, storing the original URL
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirectTo', pathname);
+    loginUrl.searchParams.set('redirectTo', pathname); // ✅ FIX: Remember where they came from
     return NextResponse.redirect(loginUrl);
   }
 
@@ -56,14 +52,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Apply middleware to all routes except:
-    // - Static files (_next/static)
-    // - Images (_next/image)
-    // - Favicon
-    // - Media files (svg, png, jpg, etc)
-    // - Fonts (woff, ttf, etc)
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff|woff2|ttf|otf)$).*)',
-    // Explicitly exclude API routes (they handle auth separately)
-    '!(^/api)',
+    '!(^/api)', // ✅ FIX: Explicitly exclude API routes
   ],
 };
