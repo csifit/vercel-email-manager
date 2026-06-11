@@ -2,7 +2,6 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export async function createClient() {
-  // For Next.js 16+, cookies() is already awaited
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -16,16 +15,12 @@ export async function createClient() {
         set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options });
-          } catch (error) {
-            // Ignored in Server Components
-          }
+          } catch (error) {}
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options });
-          } catch (error) {
-            // Ignored in Server Components
-          }
+          } catch (error) {}
         },
       },
     }
