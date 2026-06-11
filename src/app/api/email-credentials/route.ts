@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { createClient } from '@/lib/supabase/server';
 
-/**
- * GET /api/email-credentials?token={tempToken}&email={email}
- * 
- * Retrieves temporarily stored email credentials.
- * Token expires after 5 minutes or first use.
- */
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   
@@ -27,7 +21,6 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Verify user owns this email
     const { data: emailAccount } = await supabase
       .from('email_accounts')
       .select('id')
@@ -42,7 +35,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Retrieve credentials from KV
     const credentialsKey = `creds:${email}:${token}`;
     const credentials = await kv.get(credentialsKey);
 
@@ -53,10 +45,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Delete token after retrieval (one-time use)
     await kv.del(credentialsKey);
 
-    // Return credentials
     return NextResponse.json({
       email: credentials.email,
       password: credentials.password,
@@ -77,7 +67,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error('Credential retrieval error:', error);
     return NextResponse.json(
-      { error: 'Failed to retrieve credentials' },
+      { error: 'Failed to retrieve credentials', details: error.message },
       { status: 500 }
     );
   }
