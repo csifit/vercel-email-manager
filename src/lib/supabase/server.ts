@@ -1,9 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-// FIX: Make this function async
 export async function createClient() {
-  // FIX: Await the cookies() function for Next.js 15 compatibility
+  // For Next.js 16+, cookies() is already awaited
   const cookieStore = await cookies();
 
   return createServerClient(
