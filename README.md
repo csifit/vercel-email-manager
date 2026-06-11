@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vercel Email Manager
+
+Fill the gap between Vercel domains and email hosting. Instantly provision SMTP credentials from your Vercel dashboard using MXroute's infrastructure.
+
+## Features
+
+- ✅ One-click email provisioning for Vercel domains
+- ✅ Automatic SMTP/IMAP credentials in environment variables
+- ✅ Multi-domain support with user ownership
+- ✅ Webmail access via Roundcube
+- ✅ MXroute reseller integration
+
+## Prerequisites
+
+- Vercel account with domains
+- MXroute reseller account
+- Supabase project (free tier works)
+- Vercel KV storage
+
+## Environment Variables
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+# MXroute
+MXROUTE_SERVER=arrow.mxrouting.net
+MXROUTE_USERNAME=your_reseller_username
+MXROUTE_API_KEY=your_api_key
+
+# Vercel
+VERCEL_INTEGRATION_ID=your_integration_id
+
+# Auth
+NEXTAUTH_SECRET=generate_random_string
+```
 
 ## Getting Started
 
-First, run the development server:
-
+1. Clone and install:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/csifit/vercel-email-manager
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Set environment variables in `.env.local`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Run development server:
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Open http://localhost:3000
 
-## Learn More
+## Database Schema
 
-To learn more about Next.js, take a look at the following resources:
+See `docs/database.sql` for the required Supabase tables:
+- `profiles` - user accounts
+- `user_domains` - domains owned by users
+- `email_accounts` - provisioned email accounts
+- `oauth_tokens` - Vercel integration tokens
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## API Endpoints
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+See `docs/api.md` for full endpoint documentation.
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Deploy to Vercel:
+```bash
+vercel deploy
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Configure Vercel Integration in https://vercel.com/integrations/develop
+
+## Security
+
+- Passwords are stored encrypted (bcrypt)
+- Temporary tokens for credential retrieval (5 min TTL)
+- All API endpoints require authentication
+- CORS configured for Vercel subdomains only
+
+## License
+
+MIT

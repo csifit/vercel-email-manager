@@ -66,3 +66,28 @@ export async function provisionMXrouteEmail(
     serverNode: actualServer, // Return the exact server!
   };
 }
+// src/lib/mxroute-client.ts
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 3
+): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok || response.status >= 400) {
+        return response; // Return on success or client error (don't retry)
+      }
+      // Server error, try again
+      if (i < retries - 1) {
+        const delay = Math.pow(2, i) * 1000; // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      const delay = Math.pow(2, i) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('Max retries exceeded');
+}

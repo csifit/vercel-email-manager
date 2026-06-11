@@ -28,14 +28,13 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
-
+  // FIXED: Only call once instead of twice
   const { data: { user } } = await supabase.auth.getUser();
 
   // Protect all routes except /login and /pricing
-  if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/pricing')) {
+  if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/pricing') && !request.nextUrl.pathname.startsWith('/api/')) {
     return NextResponse.redirect(new URL('/login', request.url));
-    }
+  }
 
   return response;
 }
