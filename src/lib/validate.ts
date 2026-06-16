@@ -1,4 +1,3 @@
-// src/lib/validate.ts
 export function validatePassword(password: string): {
   valid: boolean;
   errors: string[];
@@ -22,13 +21,4 @@ export function validatePassword(password: string): {
     valid: errors.length === 0,
     errors,
   };
-}
-
-// In API route:
-const passwordValidation = validatePassword(password);
-if (!passwordValidation.valid) {
-  return NextResponse.json({
-    error: 'Weak password',
-    details: passwordValidation.errors,
-  }, { status: 400 });
 }
