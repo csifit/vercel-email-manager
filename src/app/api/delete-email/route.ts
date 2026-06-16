@@ -1,4 +1,8 @@
 // src/app/api/delete-email/route.ts
+import { NextResponse } from 'next/server';
+import { provisionMXrouteEmail } from '@/lib/mxroute-client';
+import { createClient } from '@/lib/supabase/server';
+
 export async function DELETE(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
