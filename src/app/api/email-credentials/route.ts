@@ -2,25 +2,37 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { createClient } from '@/lib/supabase/server';
 
+// 1. Define the exact shape of the data stored in Vercel KV
+interface EmailCredentials {
+  email: string;
+  password: string;
+  smtpHost: string;
+  smtpPort: number;
+  serverNode: string;
+}
+
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const token = req.nextUrl.searchParams.get('token');
-  const email = req.nextUrl.searchParams.get('email');
-
-  if (!token || !email) {
-    return NextResponse.json(
-      { error: 'Missing token or email parameter' },
-      { status: 400 }
-    );
-  }
-
   try {
+    // 2. Authenticate the user
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 3. Get query parameters
+    const token = req.nextUrl.searchParams.get('token');
+    const email = req.nextUrl.searchParams.get('email');
+
+    if (!token || !email) {
+      return NextResponse.json(
+        { error: 'Missing token or email parameter' },
+        { status: 400 }
+      );
+    }
+
+    // 4. Verify the user owns this email account
     const { data: emailAccount } = await supabase
       .from('email_accounts')
       .select('id')
@@ -35,8 +47,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // 5. Retrieve and validate the one-time token from KV
     const credentialsKey = `creds:${email}:${token}`;
-    const credentials = await kv.get(credentialsKey);
+    
+    // FIX: Pass the interface to kv.get so TypeScript knows the shape
+    const credentials = await kv.get<EmailCredentials>(credentialsKey);
 
     if (!credentials) {
       return NextResponse.json(
@@ -45,8 +60,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // 6. Delete the token immediately (One-time use for security)
     await kv.del(credentialsKey);
 
+    // 7. Return the credentials and the correct webmail URL
     return NextResponse.json({
       email: credentials.email,
       password: credentials.password,
@@ -62,8 +79,9 @@ export async function GET(req: NextRequest) {
         user: credentials.email,
         pass: credentials.password,
       },
-      webmail: `https://${credentials.serverNode}:2096/`,
+      webmail: `https://${credentials.serverNode}/roundcube/`,
     });
+
   } catch (error: any) {
     console.error('Credential retrieval error:', error);
     return NextResponse.json(
