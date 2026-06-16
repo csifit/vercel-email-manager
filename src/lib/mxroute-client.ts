@@ -1,3 +1,7 @@
+//src/lib/mxroute-client.ts
+console.log('MXROUTE_SERVER:', process.env.MXROUTE_SERVER);
+console.log('MXROUTE_USERNAME:', process.env.MXROUTE_USERNAME);
+console.log('MXROUTE_API_KEY exists:', !!process.env.MXROUTE_API_KEY);
 export interface ProvisionEmailResult {
   success: boolean;
   domain: string;

@@ -1,3 +1,4 @@
+//src/app/api/create-email/route.ts
 import { NextResponse } from 'next/server';
 import { provisionMXrouteEmail } from '@/lib/mxroute-client';
 import { createClient } from '@/lib/supabase/server';
@@ -52,8 +53,16 @@ export async function POST(req: Request) {
       }
     });
 
-  } catch (error: any) {
-    console.error('Create Email Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } 
+  catch (error: any) {
+  console.error('Create Email Error:', error);
+
+  return NextResponse.json(
+    {
+      error: error?.message || 'Unknown error',
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+    },
+    { status: 500 }
+  );
   }
 }
