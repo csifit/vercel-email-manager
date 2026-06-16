@@ -1,0 +1,44 @@
+```
+└── 📁src
+    └── 📁app
+        └── 📁api
+            └── 📁auth
+            └── 📁create-email
+            └── 📁delete-email
+                ├── route.ts
+            └── 📁email-credentials
+                ├── route.ts
+            └── 📁test-mxroute
+                ├── route.ts
+            └── 📁v1
+                └── 📁installations
+                    └── 📁[installationId]
+                        └── 📁resources
+                            ├── route.ts
+                        ├── route.ts
+                └── 📁products
+                    └── 📁[productSlug]
+                        └── 📁plans
+                            ├── route.ts
+        └── 📁dashboard
+            ├── page.tsx
+        └── 📁login
+            ├── page.tsx
+        └── 📁pricing
+            ├── page.tsx
+        ├── favicon.ico
+        ├── globals.css
+        ├── layout.tsx
+        ├── page.tsx
+    └── 📁lib
+        └── 📁supabase
+            ├── client.ts
+            ├── server.ts
+        ├── env.ts
+        ├── mxroute-client.ts
+        ├── password.ts
+        ├── ratelimit.ts
+        ├── validate.ts
+        ├── vercel-auth.ts
+    └── middleware.ts
+```

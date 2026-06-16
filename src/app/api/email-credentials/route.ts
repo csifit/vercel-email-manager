@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
-import { createClient } from 'supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
