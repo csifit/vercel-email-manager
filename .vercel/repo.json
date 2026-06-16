@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_kxXZ0EcFymqhFMcI5R0WueXDZ0YW",
+      "name": "vercel-email-manager",
+      "directory": ".",
+      "orgId": "team_75J0TYVp5dCkkQAwAGYUX931"
+    }
+  ]
+}
