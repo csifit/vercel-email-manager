@@ -18,10 +18,10 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./src/*"]
     },
+
+   
     "allowJs": true,
     "incremental": true,
     "plugins": [
