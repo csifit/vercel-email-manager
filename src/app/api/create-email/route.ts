@@ -30,7 +30,6 @@ export async function POST(req: Request) {
       .insert({
         user_id: user.id,
         email_address: result.email,
-        domain,
         server_node: result.serverNode,
       });
 
