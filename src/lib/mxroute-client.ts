@@ -35,16 +35,24 @@ export async function provisionMXrouteEmail(
     const errText = await domainRes.text();
     throw new Error(`MXroute Domain Error: ${errText}`);
   }
+  console.log('Domain request started');
 
   // 2. Create Email Account
   const emailRes = await fetch(`${MX_API_BASE}/domains/${domain}/email-accounts`, {
     method: 'POST', headers,
     body: JSON.stringify({ username: emailPrefix, password, quota: 0 }),
   });
-  if (!emailRes.ok) {
-    const errText = await emailRes.text();
-    throw new Error(`MXroute Email Error: ${errText}`);
-  }
+  const errText = await emailRes.text();
+
+console.log('MXroute status:', emailRes.status);
+console.log('MXroute response:', errText);
+
+if (!emailRes.ok) {
+  throw new Error(`MXroute Email Error: ${errText}`);
+}
+  console.log('Email request started');
+  console.log('Domain:', domain);
+  console.log('Prefix:', emailPrefix);
 
   // 3. Fetch Domain Details to get the EXACT server node
   let actualServer = process.env.MXROUTE_SERVER || 'arrow.mxrouting.net';
